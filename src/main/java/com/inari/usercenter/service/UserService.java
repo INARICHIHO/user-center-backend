@@ -52,6 +52,11 @@ public class UserService {
         userRepository.deleteById(id);
     }
 
+    public User findByUsername(String username) {
+        return userRepository.findByUsername(username)
+        .orElseThrow(() -> new RuntimeException("用户不存在"));
+    }
+
     private UserDTO convertToDTO(User user) {
         UserDTO dto = new UserDTO();
         dto.setId(user.getId());

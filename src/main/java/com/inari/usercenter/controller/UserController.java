@@ -3,9 +3,11 @@ package com.inari.usercenter.controller;
 import com.inari.usercenter.dto.*;
 import com.inari.usercenter.model.User;
 import com.inari.usercenter.service.UserService;
-import jakarta.servlet.http.HttpServletRequest;
+import com.inari.usercenter.util.JwtUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+
+import jakarta.servlet.http.HttpServletRequest;
 import java.util.List;
 
 @RestController
@@ -14,6 +16,9 @@ public class UserController {
 
     @Autowired
     private UserService userService;
+
+    @Autowired
+    private JwtUtil jwtUtil;   // 注入 JWT 工具类
 
     @PostMapping("/register")
     public ApiResponse<UserDTO> register(@RequestBody RegisterRequest request) {
@@ -27,13 +32,15 @@ public class UserController {
     }
 
     @PostMapping("/login")
-    public ApiResponse<UserDTO> login(@RequestBody LoginRequest request, HttpServletRequest httpRequest) {
+    public ApiResponse<LoginResult> login(@RequestBody LoginRequest request) {
         try {
             User user = userService.login(request.getUsername(), request.getPassword());
-            // 将用户对象存入 Session
-            httpRequest.getSession().setAttribute("user", user);
-            UserDTO dto = convertToDTO(user);
-            return ApiResponse.success(dto);
+            // 生成 JWT token
+            String token = jwtUtil.generateToken(user.getUsername());
+            LoginResult result = new LoginResult();
+            result.setToken(token);
+            result.setUserInfo(convertToDTO(user));
+            return ApiResponse.success(result);
         } catch (RuntimeException e) {
             return ApiResponse.error(e.getMessage());
         }
@@ -41,18 +48,23 @@ public class UserController {
 
     @GetMapping("/current")
     public ApiResponse<UserDTO> getCurrentUser(HttpServletRequest request) {
-        // 从 Session 中获取用户
-        User user = (User) request.getSession().getAttribute("user");
-        if (user == null) {
-            // 未登录，返回 40100 错误码（与前端 Mock 一致）
+        // 从请求头中获取 token（过滤器已解析并放入属性）
+        String username = (String) request.getAttribute("username");
+        if (username == null) {
             return new ApiResponse<>(40100, "未登录", null);
+        }
+        // 根据用户名查询用户（需要 userService 提供 findByUsername 方法）
+        User user = userService.findByUsername(username);
+        if (user == null) {
+            return new ApiResponse<>(40100, "用户不存在", null);
         }
         return ApiResponse.success(convertToDTO(user));
     }
 
     @PostMapping("/logout")
     public ApiResponse<Void> logout(HttpServletRequest request) {
-        request.getSession().invalidate(); // 销毁 session
+        // JWT 无状态，服务器端无需操作，前端删除 token 即可
+        // 但可以保留一个空接口供前端调用
         return ApiResponse.success(null);
     }
 
