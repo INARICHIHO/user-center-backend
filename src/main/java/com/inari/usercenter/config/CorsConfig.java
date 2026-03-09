@@ -10,7 +10,7 @@ public class CorsConfig implements WebMvcConfigurer {
     @Override
     public void addCorsMappings(CorsRegistry registry) {
         registry.addMapping("/**")  // 允许所有路径
-                .allowedOrigins("http://localhost:5173")  // 允许你的前端地址
+                .allowedOrigins("https://user-center-pied.vercel.app", "http://localhost:5173")  // 允许你的前端地址
                 .allowedMethods("*")  // 允许所有 HTTP 方法
                 .allowedHeaders("*")
                 .allowCredentials(true);
